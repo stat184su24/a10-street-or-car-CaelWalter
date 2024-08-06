@@ -1,6 +1,6 @@
 ---
 title: "Activity: Street or Road?"
-author: "YOUR NAME HERE"
+author: "Cael Walter"
 output: html_notebook
 ---
 
@@ -11,7 +11,13 @@ output: html_notebook
 
 #load in the data here 
 # we will only be using the "street-addresses.csv" file from the text
+library(dplyr)
+library(tidyr)
+library(readr)
+library(ggplot2)
 
+
+addresses <- read_csv("https://mdbeckman.github.io/dcSupplement/data/street-addresses.csv")
 
 
 ```
@@ -19,7 +25,34 @@ output: html_notebook
 ## Recreate Solved Example using `sample(50)`
 
 ```{r}
+sample_addresses <- addresses %>% sample_n(size = 50)
 
+
+po_box_pattern <- "BOX\\s+(\\d+)"
+
+
+po_box_matches <- sample_addresses %>%
+  filter(grepl(po_box_pattern, address))
+
+
+po_box_numbers <- po_box_matches %>%
+  tidyr::extract(address, into = "boxnum", regex = po_box_pattern)
+
+
+print(po_box_numbers)
+
+
+
+street_pattern <- "(ST|RD|ROAD)"
+
+
+leftovers <- addresses %>% 
+  filter(!grepl(street_pattern, address),
+         !grepl("\\sAPT|UNIT\\s[\\d]+$", address),
+         !grepl(" BOX ", address))
+
+
+head(leftovers)
 
 ```
 
@@ -27,18 +60,55 @@ output: html_notebook
 
 ```{r}
 
+po_box_matches_full <- addresses %>%
+  filter(grepl(po_box_pattern, address))
+
+
+po_box_numbers_full <- po_box_matches_full %>%
+  tidyr::extract(address, into = "boxnum", regex = po_box_pattern)
+
+
+print(po_box_numbers_full)
+
+
+street_pattern <- "(ST|RD|ROAD|LANE|AVE|BLVD|DR|COURT|CIR|WAY|PL|PKWY|TRL|TER|LOOP|HWY|ALY|PIKE|PT|PLZ|SPUR|ROW|RUN|BND)"
+
+
+po_box_pattern <- "(PO BOX|NCSU BOX| BOX )"
+
+
+apt_unit_pattern <- "\\sAPT|UNIT\\s[\\d]+$"
+
+
+leftovers <- addresses %>% 
+  filter(!grepl(street_pattern, address),
+         !grepl(apt_unit_pattern, address),
+         !grepl(po_box_pattern, address))
+
+
+head(leftovers)
 
 ```
 
 #### Additional Question: How many addresses are a PO BOX (including NCSU BOX)? 
 
 ```{r}
+combined_box_pattern <- "(PO BOX|NCSU BOX)\\s+(\\d+)"
 
+
+combined_box_matches <- addresses %>%
+  filter(grepl(combined_box_pattern, address))
+
+
+num_combined_boxes <- nrow(combined_box_matches)
+
+
+print(num_combined_boxes)
 
 ```
 
 My answer here...... 
-
+10,546
 
 ## Back to the Streets: Your Turn
 
@@ -55,10 +125,30 @@ LeftOvers <-
 ```
 
 My answer here.......
+pattern <- "(ST|RD|ROAD)": This line defines a regular expression pattern to match addresses ending with "ST", "RD", or "ROAD".
+
+LeftOvers <- Addresses %>% filter(!grepl(pattern, address), !grepl("\\sAPT|UNIT\\s[\\d]+$", address), !grepl(" BOX ", address)): This code filters the addresses dataset to exclude those that match the specified patterns. It removes addresses that contain:
+
+Street endings "ST", "RD", or "ROAD" (!grepl(pattern, address)).
+
+Apartment or unit numbers (!grepl("\\sAPT|UNIT\\s[\\d]+$", address)).
+
+The term "BOX" (!grepl(" BOX ", address)).
 
 #### Part 2: Implement your method on the entire `Addresses` data set. Explain how your code works line by line.
 
 ```{r}
+
+extended_street_pattern <- "(ST|RD|ROAD|LANE|AVE|BLVD|DR|COURT|CIR|WAY|PL|PKWY|TRL|TER|LOOP|HWY|ALY|PIKE|PT|PLZ|SPUR|ROW|RUN|BND)"
+
+
+updated_leftovers <- addresses %>% 
+  filter(!grepl(extended_street_pattern, address),
+         !grepl("\\sAPT|UNIT\\s[\\d]+$", address),
+         !grepl(" BOX ", address))
+
+
+head(updated_leftovers)
 
 
 
@@ -66,9 +156,29 @@ My answer here.......
 
 My answer here.......
 
+extended_street_pattern <- "(ST|RD|ROAD|LANE|AVE|BLVD|DR|COURT|CIR|WAY|PL|PKWY|TRL|TER|LOOP|HWY|ALY|PIKE|PT|PLZ|SPUR|ROW|RUN|BND)": This line defines a more comprehensive regular expression pattern to match a wider variety of street endings.
+
+updated_leftovers <- addresses %>% filter(!grepl(extended_street_pattern, address), !grepl("\\sAPT|UNIT\\s[\\d]+$", address), !grepl(" BOX ", address)): This code filters the addresses dataset to exclude those that match any of the specified patterns, including the new street endings.
+
 #### Additional Question 1: Present your result from part 2 by providing a table in descending order of popularity for the street name endings you found
 
 ```{r}
+
+street_endings <- addresses %>%
+  tidyr::extract(address, into = "street_ending", regex = extended_street_pattern) %>%
+  filter(!is.na(street_ending))
+
+
+street_counts <- street_endings %>%
+  group_by(street_ending) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count))
+
+
+print(street_counts)
+
+
+
 
 
 ```
@@ -78,9 +188,15 @@ My answer here.......
 Note: make sure your order street names according to popularity, not alphabetically.
 
 ```{r}
-
+ggplot(street_counts, aes(x = reorder(street_ending, -count), y = count)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Popularity of Street Endings",
+       x = "Street Ending",
+       y = "Count") +
+  theme_minimal()
 ```
 
 #### Additional Question 3: Comment on any patterns you see
 
 My answer here.......
+"ST", "DR" and "RD" are the most frequent, it may indicate that these types of streets are prevalent in Wake County, North Carolina.
